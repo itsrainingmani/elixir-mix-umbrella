@@ -12,8 +12,8 @@ defmodule KVServer do
   # 3. `active: false` - blocks on `:gen_tcp.recv/2` until data is available
   # 4. `reuseaddr:true` - allows us to reuse the address is the listener crashes
   #
-    {:ok, socket} = 
-      :gen_tcp.listen(port, [:binary, packet: :line, active: false, 
+    {:ok, socket} =
+      :gen_tcp.listen(port, [:binary, packet: :line, active: false,
       reuseaddr: true])
     Logger.info("Accepting connections on port #{port}")
     loop_acceptor(socket)
@@ -21,7 +21,10 @@ defmodule KVServer do
 
   defp loop_acceptor(socket) do
     {:ok, client} = :gen_tcp.accept(socket)
-    serve(client)
+    # Task.start_link(fn -> serve(client) end)
+    {:ok, pid} = Task.Supervisor.start_child(KVServer.TaskSupervisor,
+      fn -> serve(client) end)
+    :ok = :gen_tcp.controlling_process(client, pid)
     loop_acceptor(socket)
   end
 
